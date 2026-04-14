@@ -1,0 +1,78 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{fancyhdr}
+\usepackage[para]{footmisc}
+
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[R]{\thepage}
+\singlespacing
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\small\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.5ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IK2221 VT26}
+\fancyhead[R]{Lorenzo Deflorian (ldef@kth.se)}
+%\fancyfoot[R]{\thepage}
+
+\begin{document}
+
+\section*{SplitRPC: A \{Control + Data\} Path Splitting RPC Stack for ML Inference Serving}
+\subsection{Paper summary}
+% Paper summary (for E level)
+%% Problem being tackled and why it's hard
+%% Key idea behind the approach
+%% A bit more detail about the approach
+%% The way the idea is evaluated, plus the key findings
+
+This paper looks at the so-called “RPC tax” in machine learning inference systems, especially when using accelerators like GPUs. The main idea is that models have become very fast, so now a big part of the latency is not the computation itself, but everything around it (like data movement, communication, and orchestration).
+
+The authors point out that most existing RPC systems were designed for CPU-based services, so when they are used for ML inference they are not very efficient. There are unnecessary copies, bad use of hardware resources, and overall higher latency than needed.
+
+To address this, they propose SplitRPC. The main idea is to separate the RPC into two parts: a control path and a data path. The CPU handles the control part, while the actual data is sent more directly to the GPU (or accelerator) using the NIC. This avoids passing everything through the CPU and reduces overhead, even if it requires some coordination.
+
+They also introduce a queueing mechanism that allows sending and receiving at the same time, and supports dynamic batching of requests. This is important because batching is commonly used in ML inference to improve throughput, even if it can sometimes increase latency if not handled well.
+
+The evaluation shows that SplitRPC improves performance compared to gRPC and other systems, with around 50\% lower latency on average and up to 2.4x better throughput with batching. Also, it works without requiring only specialized SmartNICs, which makes it a bit more practical.
+
+\subsection{Contributions}
+% Top 3 contributions of the paper  (extra, for C level)
+%% Tie the contributions with impact.
+%% The first paper to propose… | Makes it possible to… 
+%% Presents a new technique for… | Dramatically improves performance of … 
+%% Offers largely improved reliability… | Saves a large fraction of power for…
+
+The first contribution is the analysis of RPC overheads in ML inference systems. The paper shows that the problem is not just serialization or protocol overhead, but also how data is moved between CPU, GPU, and NIC. This is useful because it changes where optimizations should focus.
+
+The second contribution is the design of SplitRPC itself. By splitting control and data paths, the system can use hardware resources more efficiently and reduce unnecessary work on the CPU and GPU. Also, the fact that it works with commodity NICs (not only SmartNICs) makes it more realistic to deploy, even if some assumptions are still there.
+
+The third contribution is the queueing and batching mechanism. It allows overlapping communication and computation and improves throughput without increasing latency too much. This is important for ML serving, where both latency and throughput matter, even if in practice there is always some trade-off.
+
+\subsection{Problems}
+% Most glaring problem(s) with the work (up to 3) (extra, for A level)
+%% Does the approach scale as the number of users increases?
+%% Scaling: non-linear increase in resources | How does it work under a failure?
+%% Does it miss some important cases? | Does it have too strong assumptions?
+%% Does it have unrealistic deployment requirements?
+
+One limitation is that SplitRPC is very specific to ML inference workloads. The whole idea of splitting control and data works well here, but it might not generalize easily to other types of RPC systems. The paper kind of assumes this structure, so outside this context it could be less useful.
+
+Another issue is the dependency on certain hardware features. The system relies on things like direct transfers between devices and efficient NIC support. Even if it doesn’t require only SmartNICs, it still assumes a fairly modern setup, which might not always be available in all environments.
+
+A third point is that the design depends on correctly separating control and data. For the workloads in the paper this seems straightforward, but in more complex or irregular systems this could be harder. If the split is not clean, the benefits might be reduced, or the system could become more complicated than expected. Also batching, while useful, can introduce some extra coordination overhead that is not always negligible.
+
+\end{document}
