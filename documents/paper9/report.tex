@@ -1,0 +1,78 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{fancyhdr}
+\usepackage[para]{footmisc}
+
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[R]{\thepage}
+\singlespacing
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\small\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.5ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IK2221 VT26}
+\fancyhead[R]{Lorenzo Deflorian (ldef@kth.se)}
+%\fancyfoot[R]{\thepage}
+
+\begin{document}
+
+\section*{Janus: A Unified Distributed Training Framework for Sparse\\Mixture-of-Experts Models}
+\subsection{Paper summary}
+% Paper summary (for E level)
+%% Problem being tackled and why it's hard
+%% Key idea behind the approach
+%% A bit more detail about the approach
+%% The way the idea is evaluated, plus the key findings
+
+This paper looks at the communication cost in training Mixture-of-Experts (MoE) models. The main issue is that these models rely on expert parallelism, which usually requires a lot of All-to-All communication to send tokens to the right experts and then bring results back. This becomes a bottleneck, especially at scale.
+
+Most existing systems follow what the paper calls an expert-centric approach, where experts stay fixed on GPUs and tokens are moved around. The authors propose a different idea, which is data-centric: instead of moving tokens, you move the experts. At first this sounds counterintuitive, but the key point is that experts are equal in size, so communication can be more balanced and sometimes even smaller overall.
+
+Based on this idea, they design Janus, which is a system that can switch between the two approaches depending on what is more efficient. So it doesn’t assume one is always better.
+
+They also add several optimizations, like fetching experts asynchronously, sharing them between workers on the same machine, and scheduling communication based on the network topology. There is also prefetching to overlap communication and computation, even if coordinating all this is not trivial.
+
+The evaluation shows pretty strong improvements, like up to 16x less communication and around 2x speedup compared to other systems. They also provide some analysis to explain when the data-centric approach is beneficial, using a metric (R), which helps justify the design.
+
+\subsection{Contributions}
+% Top 3 contributions of the paper  (extra, for C level)
+%% Tie the contributions with impact.
+%% The first paper to propose… | Makes it possible to… 
+%% Presents a new technique for… | Dramatically improves performance of … 
+%% Offers largely improved reliability… | Saves a large fraction of power for…
+
+The first contribution is the idea of the data-centric approach. Instead of moving tokens, the system moves experts, which is a different way of thinking about the problem. This is important because it challenges the usual assumption and shows that the default design is not always optimal.
+
+The second contribution is the Janus system itself. It combines both expert-centric and data-centric approaches and decides which one to use based on the situation. This is useful because it avoids being too rigid, even if the decision logic adds some complexity.
+
+The third contribution is the set of optimizations built on top of the design. Things like asynchronous fetching, hierarchical sharing, and topology-aware scheduling help make the system actually efficient in practice. Without these, the idea alone would probably not be enough.
+
+\subsection{Problems}
+% Most glaring problem(s) with the work (up to 3) (extra, for A level)
+%% Does the approach scale as the number of users increases?
+%% Scaling: non-linear increase in resources | How does it work under a failure?
+%% Does it miss some important cases? | Does it have too strong assumptions?
+%% Does it have unrealistic deployment requirements?
+
+One limitation is that the data-centric approach is not always better. The paper shows that its effectiveness depends on several factors like batch size, number of experts, and model dimensions. So in some cases the benefit might be small or even disappear, which makes it less general than it may seem at first.
+
+Another issue is the overall complexity of the system. Janus has to manage many things like expert fetching, caching, scheduling, and prefetching. This makes the design quite complicated, and could make it harder to implement and maintain compared to simpler approaches.
+
+A third point is that the evaluation is done on a specific setup (32 A100 GPUs) and a limited set of models. The results are good, but it’s not completely clear how the system would behave at much larger scale or with different workloads. The paper mentions other scenarios, but they are not really explored in depth.
+
+\end{document}
