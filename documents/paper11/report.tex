@@ -1,0 +1,79 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{fancyhdr}
+\usepackage[para]{footmisc}
+
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[R]{\thepage}
+\singlespacing
+\usepackage{titlesec}
+\titleformat{\section}
+  {\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\small\bfseries}{\thesubsubsection}{1em}{}
+\titlespacing*{\section}{0pt}{1.5ex plus 1ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1.5ex plus 1ex minus .2ex}{0.8ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{1ex plus 1ex minus .2ex}{0.5ex plus .2ex}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{IK2221 VT26}
+\fancyhead[R]{Lorenzo Deflorian (ldef@kth.se)}
+%\fancyfoot[R]{\thepage}
+
+\begin{document}
+
+\section*{SpecInfer: Accelerating Large Language Model Servingwith
+Tree-based Speculative Inference and Verification}
+\subsection{Paper summary}
+% Paper summary (for E level)
+%% Problem being tackled and why it's hard
+%% Key idea behind the approach
+%% A bit more detail about the approach
+%% The way the idea is evaluated, plus the key findings
+
+This paper presents SpecInfer, which is a system to speed up LLM inference using speculative decoding. The main issue is that normal autoregressive decoding generates one token at a time, which limits parallelism and doesn’t fully use the GPU. It also creates memory overhead because of the KV cache, especially for long sequences.
+
+Previous approaches try to fix this by using a smaller model to guess future tokens and then verify them with the main LLM. But usually they only guess one sequence, so if the guess is wrong, you don’t gain much.
+
+SpecInfer improves this idea by building a tree of possible token sequences instead of just one. So instead of speculating a single path, it considers multiple possible continuations at the same time. Then the main model can verify all of them in parallel in one step. This increases the chance that some of the guessed tokens are correct, even if the small model is not perfect.
+
+They also propose ways to build these trees, either using one model with diverse outputs or combining multiple speculative models. For stochastic decoding, they introduce a method that keeps the output distribution the same as normal decoding, which is important to not affect model quality.
+
+The evaluation shows speedups around 1.5--3x depending on the setup, while keeping the same output behavior. So the main idea is to increase parallelism during decoding without changing the results.
+
+\subsection{Contributions}
+% Top 3 contributions of the paper  (extra, for C level)
+%% Tie the contributions with impact.
+%% The first paper to propose… | Makes it possible to… 
+%% Presents a new technique for… | Dramatically improves performance of … 
+%% Offers largely improved reliability… | Saves a large fraction of power for…
+
+The first contribution is the idea of tree-based speculative inference. Instead of guessing one sequence, the system builds a tree of candidates, which increases the probability that the correct tokens are included somewhere. This helps improve how many tokens can be processed per step.
+
+The second contribution is how these trees are built. The paper proposes methods to generate diverse candidates, either from one model or multiple ones. This is important because the effectiveness depends on covering enough possible continuations, even if too much diversity could also increase cost.
+
+The third contribution is the verification mechanism and sampling method. The system can verify multiple paths in parallel and still guarantee that the output distribution is correct. This is important because it avoids trading correctness for speed, which is often a problem in similar approaches.
+
+\subsection{Problems}
+% Most glaring problem(s) with the work (up to 3) (extra, for A level)
+%% Does the approach scale as the number of users increases?
+%% Scaling: non-linear increase in resources | How does it work under a failure?
+%% Does it miss some important cases? | Does it have too strong assumptions?
+%% Does it have unrealistic deployment requirements?
+
+One limitation is that the system depends a lot on the quality of the speculative models. If they are not well aligned with the main LLM, the tree might not include the correct tokens often enough, so the benefit is reduced.
+
+Another issue is the increased complexity. Managing token trees, verification, and correct sampling makes the system more complicated than standard decoding. This could make it harder to implement and maintain, especially in production systems.
+
+A third point is that the speedup depends on a tradeoff. While verifying multiple candidates in parallel is efficient, building and processing the tree also adds overhead. If the speculative guesses are not accurate enough, the extra work might reduce the gains. So the results depend quite a lot on the scenario.
+
+\end{document}
